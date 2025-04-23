@@ -22,39 +22,41 @@ enum Commands {
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
-    let mut todos = storage::load()?;
+    storage::initialize_db()?;
+    let todos = storage::load()?;
 
     match cli.command {
         Commands::Add { text } => {
-            let id = todos.iter().map(|t| t.id).max().unwrap_or(0) + 1;
-            todos.push(Todo {
-                id,
+            let todo = Todo {
+                id: None,
                 content: text,
                 done: false,
-            });
-            println!("Added #{id}");
+            };
+            let id = storage::upsert(&todo)?;
+            println!("Added #{}", id);
         }
         Commands::List => {
             for t in &todos {
                 println!(
                     "[{}] {:>3} {}",
                     if t.done { "❌" } else { " " },
-                    t.id,
+                    t.id.unwrap_or(0),
                     t.content
                 );
             }
         }
         Commands::Done { id } => {
-            if let Some(t) = todos.iter_mut().find(|t| t.id == id) {
-                t.done = true;
-                println!("Completed #{id}");
+            if let Some(t) = todos.iter().find(|t| t.id == Some(id)) {
+                let mut todo = t.clone();
+                todo.done = true;
+                storage::upsert(&todo)?;
+                println!("Completed #{}", id);
             }
         }
-        Commands::Rn { id } => {
-            todos.retain(|t| t.id != id);
-            println!("Rmoved #{id}");
-        }
+        Commands::Rn { id } => match storage::delete(id) {
+            Ok(i) => println!("Removed #{i}"),
+            Err(_) => println!("Id Not Found"),
+        },
     }
-    storage::save(&todos)?;
     Ok(())
 }
