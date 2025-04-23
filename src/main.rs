@@ -1,6 +1,8 @@
 use clap::{Parser, Subcommand};
+use pretty_print::{error, print_table, success, warning};
 use todo_model::Todo;
 
+mod pretty_print;
 mod storage;
 mod todo_model;
 
@@ -33,30 +35,22 @@ fn main() -> anyhow::Result<()> {
                 done: false,
             };
             let id = storage::upsert(&todo)?;
-            println!("Added #{}", id);
+            success(&format!("Added #{}", id));
         }
-        Commands::List => {
-            for t in &todos {
-                println!(
-                    "[{}] {:>3} {}",
-                    if t.done { "❌" } else { " " },
-                    t.id.unwrap_or(0),
-                    t.content
-                );
-            }
-        }
+        Commands::List => print_table(&todos),
         Commands::Done { id } => {
             if let Some(t) = todos.iter().find(|t| t.id == Some(id)) {
                 let mut todo = t.clone();
                 todo.done = true;
                 storage::upsert(&todo)?;
-                println!("Completed #{}", id);
+                warning(&format!("Completed #{}", id));
             }
         }
         Commands::Rn { id } => match storage::delete(id) {
-            Ok(i) => println!("Removed #{i}"),
-            Err(_) => println!("Id Not Found"),
+            Ok(_) => error(&format!("Removed #{id}")),
+            Err(_) => warning("Id Not Found"),
         },
     }
     Ok(())
 }
+
