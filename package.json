@@ -1,0 +1,17 @@
+{
+  "name": "rust_todo",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@tauri-apps/api": "^2.5.0",
+    "@tauri-apps/cli": "^2.5.0",
+    "typescript": "~5.7.2",
+    "vite": "^6.3.1"
+  }
+}
