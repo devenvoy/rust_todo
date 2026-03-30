@@ -1,156 +1,88 @@
-'use client';
-
 import {
-  Button,
-  Container,
-  Text,
-  Title,
-  Modal,
-  TextInput,
-  Group,
-  ActionIcon,
-  useMantineColorScheme,
-  useComputedColorScheme,
+  MantineProvider,
+  Box,
+  Flex,
 } from '@mantine/core';
-import { MoonIcon, SunIcon } from '@radix-ui/react-icons';
-import { useState, useEffect, useRef } from 'react';
-import { useHotkeys } from '@mantine/hooks';
-import '@mantine/core/styles.css';
-import { DesktopTaskManager } from './data/DesktopTodoRepoImpl';
+import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Todo } from './data/TodoRepository';
-import TaskCard from './components/TaskCard';
+import { listen } from '@tauri-apps/api/event';
+import { precisionNoirTheme } from './theme';
+import Sidebar from './components/Sidebar';
+import TopBar from './components/TopBar';
+import WorkstreamView from './components/WorkstreamView';
+import DashboardView from './components/DashboardView';
+import ChatView from './components/ChatView';
+import SettingsModal from './components/SettingsModal';
 
 export default function App() {
-  const taskRepository = new DesktopTaskManager();
-
-  const [tasks, setTasks] = useState(taskRepository?.getTasks());
-  const [opened, setOpened] = useState(false);
-
-  const { setColorScheme } = useMantineColorScheme()
-  const computedColorScheme = useComputedColorScheme('dark')
-
-  const toggleColorScheme = () => {
-    setColorScheme(computedColorScheme === 'dark' ? 'light' : 'dark')
-  }
-
-  useHotkeys([['mod+J', () => toggleColorScheme()]]);
-
-  const taskTitleRef = useRef<HTMLInputElement>(null);
-  const taskSummaryRef = useRef<HTMLInputElement>(null);
-
-  const handleCreateTask = async () => {
-    if (taskTitleRef.current && taskSummaryRef.current) {
-      await taskRepository?.createTask(taskTitleRef.current.value, taskSummaryRef.current.value);
-      console.log("stamp 1 ");
-      loadTasks();
-      console.log("stamp 2 ");
-      taskTitleRef.current.value = '';
-      taskSummaryRef.current.value = '';
-    }
-  };
-
-  const handleDeleteTask = async (index: number) => {
-    await taskRepository?.deleteTask(index);
-    loadTasks();
-  };
-
-  const loadTasks = async () => {
-    try {
-      const fetchedTasks = await taskRepository?.getTasks();
-      setTasks(fetchedTasks);
-    } catch (error) {
-      console.error('Error loading tasks:', error);
-    }
-  };
-
-  const handleUpdateTask = async (todo: Todo) => {
-    try {
-      await taskRepository.updateTask(todo);
-      loadTasks();
-    } catch (error) {
-      console.error('Error loading tasks:', error);
-    }
-  }
+  const [activeView, setActiveView] = useState<'tasks' | 'dash' | 'chat'>('dash');
+  const [activeTask, setActiveTask] = useState<any>(null);
+  const [productivity, setProductivity] = useState<string>('Productive');
+  const [settingsOpened, setSettingsOpened] = useState(false);
 
   useEffect(() => {
-    const dd = async () => {
+    const init = async () => {
       await invoke('initialize_db');
-      loadTasks();
-    }
-    dd();
+    };
+    init();
+
+    // Listen for productivity updates from Rust
+    const unlisten = listen('productivity-update', (event) => {
+      setProductivity(event.payload as string);
+    });
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
   }, []);
 
   return (
-    <div className="App">
-      {/* Modal to create a new task */}
-      <Modal
-        opened={opened}
-        onClose={() => setOpened(false)}
-        title="New Task"
-        centered
-      >
-        <TextInput
-          mt="md"
-          ref={taskTitleRef}
-          label="Title"
-          placeholder="Task title"
-          required
-        />
-        <TextInput
-          mt="md"
-          ref={taskSummaryRef}
-          label="Summary"
-          placeholder="Task summary"
-        />
-        <Group mt="md" justify="space-between">
-          <Button variant="light" onClick={() => setOpened(false)}>
-            Cancel
-          </Button>
-          <Button onClick={() => {
-            handleCreateTask();
-            setOpened(false);
-          }}>
-            Create Task
-          </Button>
-        </Group>
-      </Modal>
+    <MantineProvider theme={precisionNoirTheme} defaultColorScheme="dark">
+      <Box h="100vh" w="100vw" bg="dark.7" style={{ overflow: 'hidden' }}>
+        <Flex h="100%" w="100%">
+          {/* Left Navigation Rail */}
+          <Sidebar 
+            active={activeView} 
+            onSelect={setActiveView} 
+            onOpenSettings={() => setSettingsOpened(true)} 
+          />
 
-      {/* Main Container */}
-      <Container size="sm" py="lg">
-        <Group justify="space-between">
-          <Title order={2} fw={900}>
-            My Tasks
-          </Title>
-          <ActionIcon
-            size="lg"
-            color="blue"
-            variant="gradient"
-            onClick={() => toggleColorScheme()}
-          >
-            {computedColorScheme === 'dark' ? <SunIcon /> : <MoonIcon />}
-          </ActionIcon>
-        </Group>
-
-        {tasks?.length ? (
-          tasks.map((task, index) => (
-            <TaskCard
-              key={index}
-              task={task}
-              index={index}
-              onDelete={handleDeleteTask}
-              onUpdate={handleUpdateTask}
+          <Flex direction="column" flex={1} style={{ position: 'relative' }}>
+            {/* Persistent Top Bar */}
+            <TopBar 
+                activeTask={activeTask} 
+                productivity={productivity} 
+                onOpenSettings={() => setSettingsOpened(true)}
             />
-          ))
-        ) : (
-          <Text size="lg" mt="md" c="dimmed">You have no tasks.</Text>
-        )}
 
-        {/* Button to open create modal */}
-        <Button fullWidth mt="lg" onClick={() => setOpened(true)}>
-          New Task
-        </Button>
-      </Container>
-    </div>
+            {/* Main Content Area: Split View */}
+            <Flex flex={1} style={{ overflow: 'hidden' }}>
+              {/* Left Side: Workstream (Always visible in split view or primary view) */}
+              <Box 
+                w={activeView === 'tasks' ? '100%' : '400px'} 
+                bg="dark.7" 
+                style={{ 
+                    transition: 'width 0.3s cubic-bezier(0.23, 1, 0.32, 1)',
+                    borderRight: activeView !== 'tasks' ? '1px solid rgba(72, 72, 72, 0.15)' : 'none'
+                }}
+              >
+                <WorkstreamView onSelectTask={setActiveTask} activeTaskId={activeTask?.id} />
+              </Box>
+
+              {/* Right Side: Dashboard or Chat */}
+              <Box flex={1} bg="dark.7" px="xl" py="lg" style={{ overflowY: 'auto' }}>
+                {activeView === 'dash' && <DashboardView />}
+                {activeView === 'chat' && <ChatView />}
+              </Box>
+            </Flex>
+          </Flex>
+        </Flex>
+        
+        <SettingsModal 
+            opened={settingsOpened} 
+            onClose={() => setSettingsOpened(false)} 
+        />
+      </Box>
+    </MantineProvider>
   );
 }
