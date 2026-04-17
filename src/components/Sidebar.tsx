@@ -1,85 +1,114 @@
-import { Box, Flex, ActionIcon, Stack, Tooltip } from '@mantine/core';
-import { 
-  DashboardIcon, 
-  CheckCircledIcon, 
-  ChatBubbleIcon, 
-  GearIcon,
-  AvatarIcon,
-  MagicWandIcon
-} from '@radix-ui/react-icons';
+import { useAppStore } from '../store/appStore';
+import { Inbox, Calendar, CalendarDays, Plus, Trash2 } from 'lucide-react';
 
-interface SidebarProps {
-  active: 'tasks' | 'dash' | 'chat';
-  onSelect: (view: 'tasks' | 'dash' | 'chat') => void;
-  onOpenSettings: () => void;
-}
+export function Sidebar() {
+  const { projects, labels, currentView, setCurrentView, createProject, createLabel, deleteProject, deleteLabel } = useAppStore();
 
-export default function Sidebar({ active, onSelect, onOpenSettings }: SidebarProps) {
+  const handleCreateProject = async () => {
+    const name = prompt('Project name:');
+    if (name) await createProject(name);
+  };
+
+  const handleCreateLabel = async () => {
+    const name = prompt('Label name:');
+    if (name) await createLabel(name);
+  };
+
+  const handleDeleteProject = async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm('Delete this project?')) {
+      await deleteProject(id);
+    }
+  };
+
+  const handleDeleteLabel = async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm('Delete this label?')) {
+      await deleteLabel(id);
+    }
+  };
+
   return (
-    <Box 
-      w={80} 
-      bg="dark.6" 
-      h="100vh" 
-      style={{ 
-        borderRight: '1px solid rgba(72, 72, 72, 0.15)',
-        zIndex: 10
-      }}
-    >
-      <Flex direction="column" h="100%" py="xl" align="center" justify="space-between">
-        <Stack gap="xl">
-          <ActionIcon 
-            size="xl" 
-            variant="light" 
-            color="violet" 
-            radius="md" 
-            style={{ marginBottom: '20px' }}
-          >
-            <MagicWandIcon style={{ width: '24px', height: '24px' }} />
-          </ActionIcon>
+    <div className="w-64 bg-[#f5f5f5] h-full flex flex-col border-r border-[#e0e0e0]">
+      <div className="p-3">
+        <button
+          onClick={() => setCurrentView('inbox')}
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            currentView === 'inbox' ? 'bg-[#e0e0e0] text-[#1a1a1a]' : 'text-[#555] hover:bg-[#e8e8e8]'
+          }`}
+        >
+          <Inbox size={18} />
+          <span>Inbox</span>
+        </button>
+        <button
+          onClick={() => setCurrentView('today')}
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            currentView === 'today' ? 'bg-[#e0e0e0] text-[#1a1a1a]' : 'text-[#555] hover:bg-[#e8e8e8]'
+          }`}
+        >
+          <Calendar size={18} />
+          <span>Today</span>
+        </button>
+        <button
+          onClick={() => setCurrentView('upcoming')}
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            currentView === 'upcoming' ? 'bg-[#e0e0e0] text-[#1a1a1a]' : 'text-[#555] hover:bg-[#e8e8e8]'
+          }`}
+        >
+          <CalendarDays size={18} />
+          <span>Upcoming</span>
+        </button>
+      </div>
 
-          <Tooltip label="Dashboard" position="right">
-            <ActionIcon 
-              size="lg" 
-              variant={active === 'dash' ? 'filled' : 'subtle'} 
-              color={active === 'dash' ? 'violet' : 'gray'}
-              onClick={() => onSelect('dash')}
+      <div className="flex-1 overflow-y-auto px-3 pb-3">
+        <div className="flex items-center justify-between mb-2 mt-4">
+          <span className="text-xs font-semibold text-[#888] uppercase">Projects</span>
+          <button onClick={handleCreateProject} className="text-[#888] hover:text-[#555]">
+            <Plus size={14} />
+          </button>
+        </div>
+        <div className="space-y-0.5">
+          {projects.filter(p => !p.is_inbox).map(project => (
+            <div
+              key={project.id}
+              className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors ${
+                currentView === project.id ? 'bg-[#e0e0e0] text-[#1a1a1a]' : 'text-[#555] hover:bg-[#e8e8e8]'
+              }`}
             >
-              <DashboardIcon />
-            </ActionIcon>
-          </Tooltip>
+              <button onClick={() => setCurrentView(project.id!)} className="flex items-center gap-2 flex-1">
+                <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: project.color }} />
+                <span className="truncate">{project.name}</span>
+              </button>
+              <button onClick={(e) => handleDeleteProject(project.id!, e)} className="opacity-0 group-hover:opacity-100 text-[#888] hover:text-[#e74444]">
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
 
-          <Tooltip label="Tasks" position="right">
-            <ActionIcon 
-              size="lg" 
-              variant={active === 'tasks' ? 'filled' : 'subtle'} 
-              color={active === 'tasks' ? 'violet' : 'gray'}
-              onClick={() => onSelect('tasks')}
+        <div className="flex items-center justify-between mb-2 mt-4">
+          <span className="text-xs font-semibold text-[#888] uppercase">Labels</span>
+          <button onClick={handleCreateLabel} className="text-[#888] hover:text-[#555]">
+            <Plus size={14} />
+          </button>
+        </div>
+        <div className="space-y-0.5">
+          {labels.map(label => (
+            <div
+              key={label.id}
+              className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-[#555] hover:bg-[#e8e8e8] transition-colors group"
             >
-              <CheckCircledIcon />
-            </ActionIcon>
-          </Tooltip>
-
-          <Tooltip label="AI Chat" position="right">
-            <ActionIcon 
-              size="lg" 
-              variant={active === 'chat' ? 'filled' : 'subtle'} 
-              color={active === 'chat' ? 'violet' : 'gray'}
-              onClick={() => onSelect('chat')}
-            >
-              <ChatBubbleIcon />
-            </ActionIcon>
-          </Tooltip>
-        </Stack>
-
-        <Stack gap="md">
-          <ActionIcon size="lg" variant="subtle" color="gray" onClick={onOpenSettings}>
-            <GearIcon />
-          </ActionIcon>
-          <ActionIcon size="lg" variant="subtle" color="gray">
-            <AvatarIcon />
-          </ActionIcon>
-        </Stack>
-      </Flex>
-    </Box>
+              <span className="flex items-center gap-2 flex-1">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: label.color }} />
+                <span>{label.name}</span>
+              </span>
+              <button onClick={(e) => handleDeleteLabel(label.id!, e)} className="opacity-0 group-hover:opacity-100 text-[#888] hover:text-[#e74444]">
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }

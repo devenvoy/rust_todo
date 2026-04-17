@@ -1,0 +1,19 @@
+- `[ ]` Scaffold `taskflow` project with Vite/React/TS
+- `[ ]` Run `cargo tauri init` inside `taskflow`
+- `[ ]` Configure dependencies (Rust + Frontend package.json)
+- `[ ]` Set up Tailwind CSS inside `taskflow`
+- `[ ]` Create `src-tauri/src/db.rs`
+- `[ ]` Create `src-tauri/src/models.rs`
+- `[ ]` Create `src-tauri/src/commands/tasks.rs`
+- `[ ]` Create `src-tauri/src/commands/projects.rs`
+- `[ ]` Create `src-tauri/src/commands/labels.rs`
+- `[ ]` Wire Commands in `src-tauri/src/main.rs`
+- `[ ]` Create `src/store/appStore.ts` (Zustand state)
+- `[ ]` Build `src/components/Sidebar.tsx`
+- `[ ]` Build `src/components/TaskInput.tsx`
+- `[ ]` Build `src/components/TaskList.tsx` & `TaskItem.tsx` (with `@dnd-kit`)
+- `[ ]` Build `src/components/TaskDetail.tsx`
+- `[ ]` Implement Smart Views (Today, Upcoming)
+- `[ ]` Add Keyboard shortcut listeners
+- `[ ]` Polish UI/Animations
+- `[ ]` Run app and verify functionality
